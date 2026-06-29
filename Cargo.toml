@@ -13,7 +13,7 @@ env_logger = "0.11.11"
 futures-util = "0.3.32"
 hkdf = { version = "0.12.4", features = ["std"] }
 jiff = { version = "0.2.29", default-features = false, features = ["perf-inline", "std", "tz-system"] }
-libc = "0.2.155"
+libc = "0.2.186"
 log = "0.4.33"
 nanoid = "0.4.0"
 num = { version = "0.4.3", features = ["rand"] }
