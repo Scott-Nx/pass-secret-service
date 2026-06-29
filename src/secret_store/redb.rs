@@ -63,7 +63,10 @@ mod tests {
 
         assert!(matches!(&error, Error::Redb(_)));
 
-        let call = Message::method("/", "Test").unwrap().build(&()).unwrap();
+        let call = Message::method_call("/", "Test")
+            .unwrap()
+            .build(&())
+            .unwrap();
         let reply = error.create_reply(&call.header()).unwrap();
 
         assert_eq!(

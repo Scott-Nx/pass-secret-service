@@ -10,7 +10,7 @@ use nanoid::nanoid;
 use zbus::{
     Connection, ObjectServer, fdo, interface,
     message::Header,
-    object_server::SignalContext,
+    object_server::SignalEmitter,
     zvariant::{Array, ObjectPath, OwnedObjectPath, OwnedValue, Value},
 };
 
@@ -196,7 +196,7 @@ impl Service<'static> {
         &'_ self,
         properties: HashMap<String, OwnedValue>,
         alias: String,
-        #[zbus(signal_context)] signal: SignalContext<'_>,
+        #[zbus(signal_emitter)] signal: SignalEmitter<'_>,
         #[zbus(object_server)] object_server: &ObjectServer,
     ) -> Result<(ObjectPath<'_>, ObjectPath<'_>)> {
         // stringify the labelg
@@ -426,12 +426,12 @@ impl Service<'static> {
     // signals
 
     #[zbus(signal)]
-    async fn collection_created(ctx: &SignalContext<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
+    async fn collection_created(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
-    async fn collection_deleted(ctx: &SignalContext<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
+    async fn collection_deleted(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
-    async fn collection_modified(ctx: &SignalContext<'_>, path: ObjectPath<'_>)
+    async fn collection_modified(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>)
     -> zbus::Result<()>;
 }
