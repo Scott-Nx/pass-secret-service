@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 aes = "0.8.4"
-argh = "0.1.13"
+argh = "0.1.19"
 async-trait = "0.1.89"
 cbc = { version = "0.1.2", features = ["std"] }
 dyn-clone = "1.0.20"
