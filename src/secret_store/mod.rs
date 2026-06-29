@@ -17,7 +17,7 @@ mod redb_imps;
 pub(crate) use redb_imps::RedbHashMap;
 //mod json;
 
-pub const PASS_SUBDIR: &'static str = "secret-service";
+pub const PASS_SUBDIR: &str = "secret-service";
 
 pub const NANOID_ALPHABET: [char; 63] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',

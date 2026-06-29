@@ -10,15 +10,15 @@ use zbus::{
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("I/O Error: {0}")]
-    IoError(#[from] io::Error),
+    Io(#[from] io::Error),
     #[error("D-Bus Error: {0}")]
-    DbusError(#[from] zbus::Error),
+    Dbus(#[from] zbus::Error),
     #[error("ReDB Error: {0}")]
-    RedbError(#[from] redb::Error),
+    Redb(#[source] Box<redb::Error>),
     #[error("Secret encryption error: {0}")]
-    EncryptionError(&'static str),
+    Encryption(&'static str),
     #[error("GPG Error: {0}")]
-    GpgError(String),
+    Gpg(String),
     #[error("Pass is not initialized")]
     NotInitialized,
     #[error("Invalid secret service session")]
@@ -33,24 +33,24 @@ impl DBusError for Error {
         #[allow(deprecated)]
         let msg = message::Builder::error(msg, name)?;
         match self {
-            Error::IoError(e) => msg.build(&(e.to_string(),)),
-            Error::DbusError(e) => msg.build(&(e.to_string(),)),
-            Error::RedbError(e) => msg.build(&(e.to_string(),)),
-            Error::GpgError(e) => msg.build(&(e,)),
+            Error::Io(e) => msg.build(&(e.to_string(),)),
+            Error::Dbus(e) => msg.build(&(e.to_string(),)),
+            Error::Redb(e) => msg.build(&(e.to_string(),)),
+            Error::Gpg(e) => msg.build(&(e,)),
             _ => msg.build(&()),
         }
     }
 
     fn name(&self) -> ErrorName<'_> {
         ErrorName::from_static_str_unchecked(match self {
-            Error::IoError(e) if e.kind() == ErrorKind::NotFound => {
+            Error::Io(e) if e.kind() == ErrorKind::NotFound => {
                 "org.freedesktop.Secret.Error.NoSuchObject"
             }
-            Error::IoError(_) => "org.freedesktop.DBus.Error.IOError",
-            Error::DbusError(_) => "org.freedesktop.zbus.Error",
-            Error::RedbError(_) => "me.grimsteel.PassSecretService.ReDBError",
-            Error::GpgError(_) => "me.grimsteel.PassSecretService.GPGError",
-            Error::EncryptionError(_) => "me.grimsteel.PassSecretService.EncryptionError",
+            Error::Io(_) => "org.freedesktop.DBus.Error.IOError",
+            Error::Dbus(_) => "org.freedesktop.zbus.Error",
+            Error::Redb(_) => "me.grimsteel.PassSecretService.ReDBError",
+            Error::Gpg(_) => "me.grimsteel.PassSecretService.GPGError",
+            Error::Encryption(_) => "me.grimsteel.PassSecretService.EncryptionError",
             Error::NotInitialized => "me.grimsteel.PassSecretService.PassNotInitialized",
             Error::InvalidSession => "org.freedesktop.Secret.Error.NoSession",
             Error::PermissionDenied => "org.freedesktop.DBus.Error.AccessDenied",
@@ -59,8 +59,8 @@ impl DBusError for Error {
 
     fn description(&self) -> Option<&str> {
         match self {
-            Error::DbusError(zbus::Error::MethodError(_, desc, _)) => desc.as_deref(),
-            Error::GpgError(e) => Some(e.as_str()),
+            Error::Dbus(zbus::Error::MethodError(_, desc, _)) => desc.as_deref(),
+            Error::Gpg(e) => Some(e.as_str()),
             _ => None,
         }
     }
@@ -69,11 +69,17 @@ impl DBusError for Error {
 impl From<Error> for fdo::Error {
     fn from(value: Error) -> Self {
         match value {
-            Error::IoError(err) => Self::IOError(format!("{err}")),
-            Error::DbusError(err) => Self::ZBus(err),
+            Error::Io(err) => Self::IOError(format!("{err}")),
+            Error::Dbus(err) => Self::ZBus(err),
             Error::PermissionDenied => Self::AccessDenied("Access denied".into()),
             err => Self::Failed(format!("{err}")),
         }
+    }
+}
+
+impl From<redb::Error> for Error {
+    fn from(value: redb::Error) -> Self {
+        Self::Redb(Box::new(value))
     }
 }
 

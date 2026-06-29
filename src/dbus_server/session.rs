@@ -67,7 +67,7 @@ impl Session {
 
     pub fn decrypt(&self, secret: Secret, header: &Header<'_>) -> Result<Vec<u8>> {
         // make sure they're allowed to do this
-        if !header.sender().is_some_and(|s| self.client_name == *s) {
+        if header.sender().is_none_or(|s| self.client_name != *s) {
             return Err(Error::PermissionDenied);
         }
 
@@ -76,7 +76,7 @@ impl Session {
 
     pub fn encrypt(&self, secret: Vec<u8>, header: &Header<'_>) -> Result<Secret> {
         // make sure they're allowed to do this
-        if !header.sender().is_some_and(|s| self.client_name == *s) {
+        if header.sender().is_none_or(|s| self.client_name != *s) {
             return Err(Error::PermissionDenied);
         }
 

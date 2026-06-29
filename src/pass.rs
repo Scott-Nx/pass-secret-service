@@ -122,7 +122,7 @@ impl PasswordStore {
             // gpg decrypted successfully
             Ok(output.stdout)
         } else {
-            Err(Error::GpgError(
+            Err(Error::Gpg(
                 String::from_utf8_lossy(&output.stderr).into_owned(),
             ))
         }
@@ -148,7 +148,7 @@ impl PasswordStore {
             }
         }
         // we couldn't find a gpg key
-        return Err(Error::NotInitialized);
+        Err(Error::NotInitialized)
     }
 
     async fn ensure_dirs(&self, dir: impl AsRef<Path>) -> Result {
@@ -201,7 +201,7 @@ impl PasswordStore {
 
             Ok(())
         } else {
-            Err(Error::GpgError(
+            Err(Error::Gpg(
                 String::from_utf8_lossy(&output.stderr).into_owned(),
             ))
         }
@@ -245,6 +245,7 @@ impl PasswordStore {
         Ok(OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(false)
             .read(true)
             .mode(self.file_mode)
             .open(path)
@@ -295,7 +296,7 @@ impl PasswordStore {
 
         // return any errors that occurred
         if !gpg_result.status.success() {
-            return Err(Error::GpgError(
+            return Err(Error::Gpg(
                 String::from_utf8_lossy(&gpg_result.stderr).into_owned(),
             ));
         }
@@ -335,9 +336,7 @@ impl PasswordStore {
 
             // look for the following keygrip
             let Some(keygrip) = gpg_line_iter.find_map(|mut line| {
-                let Some(item_type) = line.nth(0) else {
-                    return None;
-                };
+                let item_type = line.nth(0)?;
 
                 // keygrip
                 if item_type != "grp" {
@@ -345,13 +344,11 @@ impl PasswordStore {
                 }
 
                 // Field 10: keygrip (user id) (index 9, 8 after type is consumed)
-                let Some(keygrip) = line.nth(8) else {
-                    return None;
-                };
+                let keygrip = line.nth(8)?;
 
                 Some(keygrip)
             }) else {
-                return Err(Error::GpgError("no keygrip found".into()));
+                return Err(Error::Gpg("no keygrip found".into()));
             };
 
             // make gpg agent forget the passphrase for this key
@@ -363,7 +360,7 @@ impl PasswordStore {
                 .await?;
 
             if !gpg_agent_result.status.success() {
-                return Err(Error::GpgError(
+                return Err(Error::Gpg(
                     String::from_utf8_lossy(&gpg_agent_result.stderr).into_owned(),
                 ));
             }

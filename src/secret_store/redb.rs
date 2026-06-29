@@ -8,7 +8,7 @@ use redb::{
 use tokio::{sync::RwLock, task::spawn_blocking};
 
 use crate::{
-    error::{raise_nonexistent_table, IntoResult, OptionNoneNotFound, Result},
+    error::{raise_nonexistent_table, Error, IntoResult, OptionNoneNotFound, Result},
     pass::PasswordStore,
     secret_store::{redb_imps::RedbHashMap, slugify, SecretStore, NANOID_ALPHABET, PASS_SUBDIR},
 };
@@ -29,21 +29,66 @@ const ALIASES_TABLE: TableDefinition<&str, &str> = TableDefinition::new("aliases
 const ALIASES_TABLE_REVERSE: MultimapTableDefinition<&str, &str> =
     MultimapTableDefinition::new("aliases_reverse");
 
-const ATTRIBUTES_DB: &'static str = "attributes.redb";
+const ATTRIBUTES_DB: &str = "attributes.redb";
 
-type RedbResult<T> = std::result::Result<T, redb::Error>;
+#[derive(Debug)]
+struct BoxedRedbError(Box<redb::Error>);
+
+impl<E: Into<redb::Error>> From<E> for BoxedRedbError {
+    fn from(value: E) -> Self {
+        Self(Box::new(value.into()))
+    }
+}
+
+impl From<BoxedRedbError> for Error {
+    fn from(value: BoxedRedbError) -> Self {
+        Self::Redb(value.0)
+    }
+}
+
+type RedbResult<T> = std::result::Result<T, BoxedRedbError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zbus::{DBusError, Message};
+
+    #[test]
+    fn redb_failure_preserves_dbus_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let redb_error = Database::create(dir.path()).unwrap_err();
+        let expected_message = redb_error.to_string();
+        let boxed_error: BoxedRedbError = redb_error.into();
+        let error: Error = boxed_error.into();
+
+        assert!(matches!(&error, Error::Redb(_)));
+
+        let call = Message::method("/", "Test").unwrap().build(&()).unwrap();
+        let reply = error.create_reply(&call.header()).unwrap();
+
+        assert_eq!(
+            reply.header().error_name().unwrap(),
+            "me.grimsteel.PassSecretService.ReDBError"
+        );
+        assert_eq!(
+            reply.body().deserialize::<String>().unwrap(),
+            expected_message
+        );
+    }
+}
+
 /// open a db contained within the given PasswordStore
 async fn open_db(pass: &PasswordStore, path: impl AsRef<Path>) -> Result<Database> {
     let db_file = pass.open_file(path).await?.into_std().await;
     Ok(redb::Builder::new()
         .create_file(db_file)
-        .map_err(|e| Into::<redb::Error>::into(e))?)
+        .map_err(Into::<redb::Error>::into)?)
 }
 
 /// search a collection for the given attributes
 /// returns a vec of secret IDs
 pub fn search_collection(attrs: &HashMap<String, String>, db: &Database) -> Result<Vec<String>> {
-    if attrs.len() == 0 {
+    if attrs.is_empty() {
         return Ok(vec![]);
     };
 
@@ -52,7 +97,7 @@ pub fn search_collection(attrs: &HashMap<String, String>, db: &Database) -> Resu
     let attributes_reverse =
         raise_nonexistent_table!(tx.open_table(ATTRIBUTES_TABLE_REVERSE), Ok(vec![]));
 
-    let mut attr_iter = attrs.into_iter();
+    let mut attr_iter = attrs.iter();
 
     // get the secrets which fit the first K/V attr pair
     let initial_matches = attributes
@@ -106,7 +151,7 @@ impl<'a> RedbSecretStore<'a> {
         {
             // make the DB for this collection
             let db_path = Path::new(PASS_SUBDIR).join(&id).join(ATTRIBUTES_DB);
-            let db = open_db(&pass, db_path).await?;
+            let db = open_db(pass, db_path).await?;
             collections.insert(id, db);
         }
 
@@ -119,7 +164,7 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
     async fn new(pass: &'a PasswordStore) -> Result<Self> {
         let collections = Self::get_current_collections(pass).await?;
 
-        let db = open_db(&pass, &format!("{PASS_SUBDIR}/collections.redb")).await?;
+        let db = open_db(pass, &format!("{PASS_SUBDIR}/collections.redb")).await?;
 
         let store = Self {
             pass,
@@ -353,7 +398,7 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
             self.pass.make_dir(&collection_path).await?;
 
             collection_path.push(ATTRIBUTES_DB);
-            let db = open_db(&self.pass, collection_path).await?;
+            let db = open_db(self.pass, collection_path).await?;
 
             collections.insert(collection_id.clone(), db);
         }
@@ -431,7 +476,7 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
         spawn_blocking(move || {
             let cols = collections.blocking_read();
             let db = cols.get(collection_id.as_ref()).into_not_found()?;
-            Ok(search_collection(&attributes, db)?)
+            search_collection(&attributes, db)
         })
         .await
         .unwrap()
@@ -441,13 +486,13 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
     async fn stat_collection(&self, collection_id: &str) -> Result<Metadata> {
         // just use the attributes db file rather than actually calculating the last modified date
         let collection_path = Path::new(PASS_SUBDIR)
-            .join(&collection_id)
+            .join(collection_id)
             .join(ATTRIBUTES_DB);
         Ok(self.pass.stat_file(collection_path).await?)
     }
 
     async fn list_secrets(&self, collection_id: &str) -> Result<Vec<String>> {
-        let collection_path = Path::new(PASS_SUBDIR).join(&collection_id);
+        let collection_path = Path::new(PASS_SUBDIR).join(collection_id);
 
         Ok(self
             .pass
@@ -561,7 +606,7 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
     async fn stat_secret(&self, collection_id: &str, secret_id: &str) -> Result<Metadata> {
         let secret_path = Path::new(PASS_SUBDIR)
             .join(&*collection_id)
-            .join(&format!("{secret_id}.gpg"));
+            .join(format!("{secret_id}.gpg"));
 
         Ok(self.pass.stat_file(secret_path).await?)
     }
@@ -578,7 +623,7 @@ impl<'a> SecretStore<'a> for RedbSecretStore<'a> {
         let collection_dir = Path::new(PASS_SUBDIR).join(&*collection_id);
 
         let secret_id = if let Some(label) = &label {
-            format!("{}_{}", slugify(&label), nanoid!(4, &NANOID_ALPHABET))
+            format!("{}_{}", slugify(label), nanoid!(4, &NANOID_ALPHABET))
         } else {
             nanoid!(8, &NANOID_ALPHABET)
         };

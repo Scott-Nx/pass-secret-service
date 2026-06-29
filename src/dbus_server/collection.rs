@@ -137,7 +137,7 @@ impl Collection<'static> {
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "[unknown ID]".into())
         );
-        let secrets = self.store.list_secrets(&*self.id).await?;
+        let secrets = self.store.list_secrets(&self.id).await?;
 
         // remove this collection from the object server
         if let Some(path) = collection_path(&*self.id) {
@@ -232,7 +232,7 @@ impl Collection<'static> {
             if let Some(secret_id) = matching_secret.into_iter().nth(0).map(Arc::new) {
                 // update the secret/label
                 self.store
-                    .set_secret(&*self.id, &*secret_id, secret_value)
+                    .set_secret(&self.id, &secret_id, secret_value)
                     .await?;
                 if let Some(label) = label {
                     self.store
@@ -287,7 +287,7 @@ impl Collection<'static> {
     async fn items(&'_ self) -> fdo::Result<Vec<ObjectPath<'_>>> {
         Ok(self
             .store
-            .list_secrets(&*self.id)
+            .list_secrets(&self.id)
             .await?
             .into_iter()
             // get the full path of the secret

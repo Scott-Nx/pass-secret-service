@@ -25,8 +25,8 @@ mod pass;
 mod secret_store;
 
 // Constants from the spec
-const WELL_KNOWN_NAME: &'static str = "org.freedesktop.secrets";
-const BASE_PATH: &'static str = "/org/freedesktop/secrets";
+const WELL_KNOWN_NAME: &str = "org.freedesktop.secrets";
+const BASE_PATH: &str = "/org/freedesktop/secrets";
 
 async fn run(args: CliArgs) -> Result {
     match args.subcommand {

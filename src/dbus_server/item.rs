@@ -143,7 +143,7 @@ impl<'a> Item<'a> {
 
         let secret_value = self
             .store
-            .read_secret(&*self.collection_id, &*self.id, true)
+            .read_secret(&self.collection_id, &self.id, true)
             .await?;
 
         // update fetch access info
@@ -299,7 +299,7 @@ impl Item<'static> {
                 .decrypt(secret, &header)?;
 
         self.store
-            .set_secret(&*self.collection_id, &*self.id, secret_value)
+            .set_secret(&self.collection_id, &self.id, secret_value)
             .await?;
 
         self.broadcast_collection_signal(connection, "ItemChanged")
@@ -364,7 +364,7 @@ impl Item<'static> {
     async fn created(&self) -> fdo::Result<u64> {
         let metadata = self
             .store
-            .stat_secret(&*self.collection_id, &*self.id)
+            .stat_secret(&self.collection_id, &self.id)
             .await?;
         Ok(time_to_int(metadata.created()))
     }
@@ -373,7 +373,7 @@ impl Item<'static> {
     async fn modified(&self) -> fdo::Result<u64> {
         let metadata = self
             .store
-            .stat_secret(&*self.collection_id, &*self.id)
+            .stat_secret(&self.collection_id, &self.id)
             .await?;
         Ok(time_to_int(metadata.modified()))
     }
@@ -582,8 +582,7 @@ mod tests {
             assert!(
                 !ReadableMultimapTable::get(&attributes_table, (key.as_str(), value.as_str()),)
                     .unwrap()
-                    .map(|entry| entry.unwrap().value() == secret_id.as_str())
-                    .any(|matches| matches)
+                    .any(|entry| entry.unwrap().value() == secret_id.as_str())
             );
         }
     }

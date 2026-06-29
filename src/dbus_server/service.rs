@@ -36,7 +36,7 @@ use super::{
 };
 
 /// Default name of the initially created collection and alias
-pub const DEFAULT_COLLECTION_NAME: &'static str = "default";
+pub const DEFAULT_COLLECTION_NAME: &str = "default";
 
 #[derive(Debug)]
 pub struct Service<'a> {
@@ -75,7 +75,7 @@ impl Service<'static> {
                 let collection_id = Arc::new(collection);
 
                 let secrets: Vec<_> = store
-                    .list_secrets(&*collection_id)
+                    .list_secrets(&collection_id)
                     .await?
                     .into_iter()
                     .map(|id| Item {
@@ -208,7 +208,7 @@ impl Service<'static> {
         // slugify the alias and handle the case where it's empty
         let alias = slugify(&alias);
 
-        let alias = if alias == "" { None } else { Some(alias) };
+        let alias = if alias.is_empty() { None } else { Some(alias) };
 
         let id = self.store.create_collection(label, alias.clone()).await?;
         let collection_path = collection_path(&id).unwrap();
@@ -274,7 +274,7 @@ impl Service<'static> {
                     match try_interface(object_server.interface::<_, Item>(&object_path).await)? {
                         Some(item) => {
                             // this object is an item
-                            get_collection_dir(&*item.get().await.collection_id)
+                            get_collection_dir(&item.get().await.collection_id)
                         }
                         None => {
                             // this might be a collection
@@ -282,7 +282,7 @@ impl Service<'static> {
                                 object_server.interface::<_, Collection>(&object_path).await,
                             )?
                             .into_not_found()?;
-                            let collection_dir = get_collection_dir(&*collection.get().await.id);
+                            let collection_dir = get_collection_dir(&collection.get().await.id);
                             // this is just to satisfy the borrow checker
                             collection_dir
                         }
@@ -397,7 +397,7 @@ impl Service<'static> {
 
             if let Some(id) = &collection_id {
                 // add secrets under this alias
-                for secret in self.store.list_secrets(&id).await? {
+                for secret in self.store.list_secrets(id).await? {
                     if let Some(path) = secret_alias_path(&*alias, &secret) {
                         if let Some(item) =
                             try_interface(object_server.interface::<_, Item>(&path).await)?

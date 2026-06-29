@@ -115,7 +115,7 @@ impl DhIetf1024Sha256Aes128CbcPkcs7Transfer {
         let mut okm = [0; 16];
         // empty info
         hk.expand(&[], &mut okm)
-            .map_err(|_| Error::EncryptionError("Invalid length"))?;
+            .map_err(|_| Error::Encryption("Invalid length"))?;
 
         let aes_key = GenericArray::clone_from_slice(&okm);
 
@@ -140,9 +140,9 @@ impl SessionTransfer for DhIetf1024Sha256Aes128CbcPkcs7Transfer {
         // client provides the IV
         let iv = GenericArray::from_slice(&secret.parameters[..]);
 
-        Ok(Aes128CbcDec::new(&self.shared_key, &iv)
+        Aes128CbcDec::new(&self.shared_key, iv)
             .decrypt_padded_vec_mut::<Pkcs7>(&secret.value[..])
-            .map_err(|_| Error::EncryptionError("AES Unpad Error"))?)
+            .map_err(|_| Error::Encryption("AES Unpad Error"))
     }
 
     fn encrypt(&self, value: Vec<u8>, session: OwnedObjectPath) -> Result<Secret> {
