@@ -8,8 +8,8 @@ use aes::{
     },
 };
 use hkdf::Hkdf;
-use num::{BigUint, FromPrimitive, bigint::RandBigInt};
-use rand::{prelude::*, rngs::OsRng};
+use num::{BigUint, FromPrimitive};
+use rand::{TryRng, rngs::SysRng};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use zbus::zvariant::{OwnedObjectPath, Type};
@@ -100,7 +100,11 @@ impl DhIetf1024Sha256Aes128CbcPkcs7Transfer {
     pub fn new(client_pub_key: &[u8]) -> Result<Self> {
         // generate a private key
         // 128 byte privkey
-        let priv_key = OsRng.gen_biguint(128 * 8);
+        let mut priv_key_bytes = [0; 128];
+        SysRng
+            .try_fill_bytes(&mut priv_key_bytes)
+            .expect("failed to obtain OS randomness");
+        let priv_key = BigUint::from_bytes_be(&priv_key_bytes);
 
         let dh_prime = &*DH_SECOND_OAKLEY_PRIME;
 
@@ -148,7 +152,9 @@ impl SessionTransfer for DhIetf1024Sha256Aes128CbcPkcs7Transfer {
     fn encrypt(&self, value: Vec<u8>, session: OwnedObjectPath) -> Result<Secret> {
         // we generate the IV
         let mut iv = [0; 16];
-        OsRng.fill_bytes(&mut iv);
+        SysRng
+            .try_fill_bytes(&mut iv)
+            .expect("failed to obtain OS randomness");
 
         let encrypted_secret = Aes128CbcEnc::new(&self.shared_key, GenericArray::from_slice(&iv))
             .encrypt_padded_vec_mut::<Pkcs7>(&value[..]);
