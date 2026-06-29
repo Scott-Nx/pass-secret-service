@@ -5,12 +5,12 @@ use tokio::{
     task,
 };
 use zbus::{
+    Connection, ObjectServer,
     fdo::{self, DBusProxy},
     interface,
     message::Header,
     names::OwnedUniqueName,
     zvariant::OwnedObjectPath,
-    Connection, ObjectServer,
 };
 
 use crate::error::{Error, Result};

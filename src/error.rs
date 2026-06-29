@@ -1,10 +1,9 @@
 use std::io::{self, ErrorKind};
 
 use zbus::{
-    fdo,
+    DBusError, Message, fdo,
     message::{self, Header},
     names::ErrorName,
-    DBusError, Message,
 };
 
 #[derive(Debug, thiserror::Error)]

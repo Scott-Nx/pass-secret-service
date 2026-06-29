@@ -8,9 +8,9 @@ use redb::{
 use tokio::{sync::RwLock, task::spawn_blocking};
 
 use crate::{
-    error::{raise_nonexistent_table, Error, IntoResult, OptionNoneNotFound, Result},
+    error::{Error, IntoResult, OptionNoneNotFound, Result, raise_nonexistent_table},
     pass::PasswordStore,
-    secret_store::{redb_imps::RedbHashMap, slugify, SecretStore, NANOID_ALPHABET, PASS_SUBDIR},
+    secret_store::{NANOID_ALPHABET, PASS_SUBDIR, SecretStore, redb_imps::RedbHashMap, slugify},
 };
 
 // Collection tables

@@ -8,11 +8,10 @@ use dyn_clone::clone_box;
 use log::debug;
 use nanoid::nanoid;
 use zbus::{
-    fdo, interface,
+    Connection, ObjectServer, fdo, interface,
     message::Header,
     object_server::SignalContext,
     zvariant::{Array, ObjectPath, OwnedObjectPath, OwnedValue, Value},
-    Connection, ObjectServer,
 };
 
 use crate::{
@@ -20,7 +19,7 @@ use crate::{
     error::{Error, OptionNoneNotFound, Result},
     pass::PasswordStore,
     secret_store::{
-        get_collection_dir, redb::RedbSecretStore, slugify, SecretStore, NANOID_ALPHABET,
+        NANOID_ALPHABET, SecretStore, get_collection_dir, redb::RedbSecretStore, slugify,
     },
 };
 
@@ -30,8 +29,8 @@ use super::{
     secret_transfer::{PlainTextTransfer, Secret},
     session::Session,
     utils::{
-        alias_path, collection_path, secret_alias_path, secret_path, session_path, try_interface,
-        EMPTY_PATH,
+        EMPTY_PATH, alias_path, collection_path, secret_alias_path, secret_path, session_path,
+        try_interface,
     },
 };
 
@@ -180,7 +179,7 @@ impl Service<'static> {
                 _ => {
                     return Err(fdo::Error::NotSupported(
                         "Algorithm is not supported".into(),
-                    ))
+                    ));
                 }
             };
         let session = Session::new(
@@ -398,12 +397,11 @@ impl Service<'static> {
             if let Some(id) = &collection_id {
                 // add secrets under this alias
                 for secret in self.store.list_secrets(id).await? {
-                    if let Some(path) = secret_alias_path(&*alias, &secret) {
-                        if let Some(item) =
+                    if let Some(path) = secret_alias_path(&*alias, &secret)
+                        && let Some(item) =
                             try_interface(object_server.interface::<_, Item>(&path).await)?
-                        {
-                            object_server.at(&path, item.get().await.to_owned()).await?;
-                        }
+                    {
+                        object_server.at(&path, item.get().await.to_owned()).await?;
                     }
                 }
             }
@@ -435,5 +433,5 @@ impl Service<'static> {
 
     #[zbus(signal)]
     async fn collection_modified(ctx: &SignalContext<'_>, path: ObjectPath<'_>)
-        -> zbus::Result<()>;
+    -> zbus::Result<()>;
 }

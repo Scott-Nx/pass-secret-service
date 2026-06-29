@@ -4,17 +4,17 @@ use cli::CliArgs;
 use dbus_server::service::Service;
 use env_logger::Env;
 use jiff::{
+    SignedDuration, Timestamp, Zoned,
     fmt::{friendly::SpanPrinter, rfc2822},
     tz::TimeZone,
-    SignedDuration, Timestamp, Zoned,
 };
 use log::{debug, error, info};
 use pass::PasswordStore;
-use zbus::{zvariant::Optional, Connection};
+use zbus::{Connection, zvariant::Optional};
 
 use crate::{
     cli::{CliSubcommand, LastAccessorSubcommand},
-    dbus_server::{service::DEFAULT_COLLECTION_NAME, SecretAccessor},
+    dbus_server::{SecretAccessor, service::DEFAULT_COLLECTION_NAME},
     error::Result,
 };
 

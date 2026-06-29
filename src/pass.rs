@@ -8,8 +8,8 @@ use std::{
 };
 use tokio::{
     fs::{
-        metadata, read, read_dir, read_to_string, remove_dir_all, remove_file, DirBuilder, File,
-        OpenOptions,
+        DirBuilder, File, OpenOptions, metadata, read, read_dir, read_to_string, remove_dir_all,
+        remove_file,
     },
     io::AsyncWriteExt,
     process::Command,

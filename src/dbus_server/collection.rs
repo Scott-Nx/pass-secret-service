@@ -3,11 +3,10 @@ use log::{debug, trace};
 use std::{collections::HashMap, sync::Arc};
 
 use zbus::{
-    fdo, interface,
+    Connection, ObjectServer, fdo, interface,
     message::Header,
     object_server::SignalContext,
     zvariant::{Dict, ObjectPath, Value},
-    Connection, ObjectServer,
 };
 
 use crate::{
@@ -20,8 +19,8 @@ use super::{
     item::Item,
     session::Session,
     utils::{
-        alias_path, collection_path, secret_alias_path, secret_path, time_to_int, try_interface,
-        EMPTY_PATH,
+        EMPTY_PATH, alias_path, collection_path, secret_alias_path, secret_path, time_to_int,
+        try_interface,
     },
 };
 
@@ -70,9 +69,7 @@ impl<'a> Collection<'a> {
         let collection_path = collection_path(&collection_id).unwrap();
         trace!(
             "Broadcasting signal {} on {} and all aliases for {}",
-            name,
-            collection_path,
-            data_path
+            name, collection_path, data_path
         );
 
         let signal_data = (data_path,);

@@ -6,13 +6,13 @@ use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 use tokio::{sync::RwLock, task::spawn_blocking};
 
 use zbus::{
+    Connection, ObjectServer,
     fdo::{self, DBusProxy},
     interface,
     message::Header,
     names::{BusName, UniqueName},
     object_server::InterfaceDeref,
     zvariant::{ObjectPath, Optional, Type, Value},
-    Connection, ObjectServer,
 };
 
 use crate::{
@@ -24,7 +24,7 @@ use crate::{
 use super::{
     secret_transfer::Secret,
     session::Session,
-    utils::{secret_alias_path, secret_path, time_to_int, try_interface, EMPTY_PATH},
+    utils::{EMPTY_PATH, secret_alias_path, secret_path, time_to_int, try_interface},
 };
 
 #[derive(Type, Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -393,13 +393,13 @@ mod tests {
     };
     use tempfile::tempdir;
     use tokio::{fs, net::UnixStream, process::Command};
-    use zbus::{connection::Builder, Guid};
+    use zbus::{Guid, connection::Builder};
 
     use super::Item;
     use crate::{
         dbus_server::utils::secret_path,
         pass::PasswordStore,
-        secret_store::{redb::RedbSecretStore, RedbHashMap, SecretStore, PASS_SUBDIR},
+        secret_store::{PASS_SUBDIR, RedbHashMap, SecretStore, redb::RedbSecretStore},
     };
 
     const ATTRIBUTES_TABLE: MultimapTableDefinition<(&str, &str), &str> =
@@ -551,11 +551,13 @@ mod tests {
         item.delete(&server, &server.object_server()).await.unwrap();
 
         assert!(!secret_file.exists());
-        assert!(store
-            .search_collection(collection_id.clone(), Arc::new(attributes.clone()))
-            .await
-            .unwrap()
-            .is_empty());
+        assert!(
+            store
+                .search_collection(collection_id.clone(), Arc::new(attributes.clone()))
+                .await
+                .unwrap()
+                .is_empty()
+        );
 
         drop(item);
         drop(store);
@@ -572,12 +574,16 @@ mod tests {
         let attributes_reverse = tx.open_table(ATTRIBUTES_TABLE_REVERSE).unwrap();
         let attributes_table = tx.open_multimap_table(ATTRIBUTES_TABLE).unwrap();
 
-        assert!(ReadableTable::get(&labels, secret_id.as_str())
-            .unwrap()
-            .is_none());
-        assert!(ReadableTable::get(&attributes_reverse, secret_id.as_str())
-            .unwrap()
-            .is_none());
+        assert!(
+            ReadableTable::get(&labels, secret_id.as_str())
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            ReadableTable::get(&attributes_reverse, secret_id.as_str())
+                .unwrap()
+                .is_none()
+        );
         for (key, value) in &attributes {
             assert!(
                 !ReadableMultimapTable::get(&attributes_table, (key.as_str(), value.as_str()),)
