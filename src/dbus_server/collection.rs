@@ -5,7 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 use zbus::{
     Connection, ObjectServer, fdo, interface,
     message::Header,
-    object_server::SignalEmitter,
+    object_server::SignalContext,
     zvariant::{Dict, ObjectPath, Value},
 };
 
@@ -324,11 +324,11 @@ impl Collection<'static> {
     }
 
     #[zbus(signal)]
-    async fn item_created(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
+    async fn item_created(ctx: &SignalContext<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
-    async fn item_deleted(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
+    async fn item_deleted(ctx: &SignalContext<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
-    async fn item_changed(ctx: &SignalEmitter<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
+    async fn item_changed(ctx: &SignalContext<'_>, path: ObjectPath<'_>) -> zbus::Result<()>;
 }

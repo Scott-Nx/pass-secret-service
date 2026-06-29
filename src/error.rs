@@ -1,6 +1,10 @@
 use std::io::{self, ErrorKind};
 
-use zbus::{DBusError, Message, fdo, message::Header, names::ErrorName};
+use zbus::{
+    DBusError, Message, fdo,
+    message::{self, Header},
+    names::ErrorName,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -25,7 +29,8 @@ pub enum Error {
 impl DBusError for Error {
     fn create_reply(&self, msg: &Header<'_>) -> zbus::Result<Message> {
         let name = self.name();
-        let msg = Message::error(msg, name)?;
+        #[allow(deprecated)]
+        let msg = message::Builder::error(msg, name)?;
         match self {
             Error::Io(e) => msg.build(&(e.to_string(),)),
             Error::Dbus(e) => msg.build(&(e.to_string(),)),
